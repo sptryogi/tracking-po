@@ -145,14 +145,15 @@ if st.session_state.show_import:
                     if to_insert:
                         # batch insert
                         res = supabase.table("po_sales").insert(to_insert).execute()
-                        if res.status_code in (200, 201, 204) or res.error is None:
+                        if res.status_code in (200, 201, 204):
                             st.success(f"Berhasil memasukkan {len(to_insert)} record.")
                         else:
-                            st.error(f"Gagal insert: {res.error}")
+                            st.error(f"Gagal insert. Status: {res.status_code}")
+
             # end uploaded handling
 
 # -------- PAGES: Dashboard / Input / Edit --------
-if st.session_state.page == "input" or (st.session_state.page == "edit" and st.session_state.edit_id is None):
+if st.session_state.page == "input" and st.session_state.edit_id is None:
     # Input manual form
     st.header("Form Input PO Manual")
     with st.form("form_po_manual"):
@@ -185,14 +186,16 @@ if st.session_state.page == "input" or (st.session_state.page == "edit" and st.s
                     "status": status,
                     "tanggal": str(tanggal),
                     "jatuh_tempo": str(jatuh_tempo),
-                    "created_at": pd.Timestamp.utcnow().isoformat()
+                    # "created_at": pd.Timestamp.utcnow().isoformat()
+                    "created_at": pd.Timestamp.now(tz=JAKARTA).isoformat()
                 }
                 res = supabase.table("po_sales").insert(rec).execute()
-                if res.error:
-                    st.error(f"Gagal menyimpan: {res.error}")
+                if res.status_code not in (200, 201, 204):
+                    st.error(f"Gagal menyimpan data. Status: {res.status_code}")
                 else:
                     st.success("Data PO berhasil disimpan!")
                     st.session_state.page = "dashboard"
+                    st.rerun()
 
 # Dashboard page
 if st.session_state.page == "dashboard":
@@ -241,8 +244,13 @@ if st.session_state.page == "dashboard":
         try:
             chart_df = df_filtered.copy()
             chart_df["tanggal_day"] = chart_df["tanggal"].dt.date
-            chart_agg = chart_df.groupby("tanggal_day").agg({"total_tagihan":"sum"}).reset_index()
-            st.line_chart(chart_agg.rename(columns={"tanggal_day":"index"}).set_index("index")["total_tagihan"])
+            # chart_agg = chart_df.groupby("tanggal_day").agg({"total_tagihan":"sum"}).reset_index()
+            # st.line_chart(chart_agg.rename(columns={"tanggal_day":"index"}).set_index("index")["total_tagihan"])
+            chart_agg = chart_df.groupby("tanggal_day", dropna=True)["total_tagihan"].sum().reset_index()
+            chart_agg = chart_agg.sort_values("tanggal_day")
+            st.line_chart(
+                chart_agg.set_index("tanggal_day")["total_tagihan"]
+            )
         except Exception:
             st.write("Chart tidak tersedia karena data tanggal kurang lengkap.")
 
@@ -255,6 +263,17 @@ if st.session_state.page == "dashboard":
         # show as interactive table with action buttons per row (use st.table + select by index)
         st.markdown("#### Tabel PO (klik baris index untuk pilih record → gunakan tombol Edit / Hapus)")
         # show small table
+        def highlight_status(row):
+            if row["status"] == "Lunas":
+                return ['background-color: #b2f2bb'] * len(row)
+            elif row["status"] == "Belum Lunas":
+                return ['background-color: #fff3bf'] * len(row)
+            elif row["jatuh_tempo"] and pd.to_datetime(row["jatuh_tempo"]) < pd.Timestamp.now().tz_localize(None):
+                return ['background-color: #ffc9c9'] * len(row)
+            return [''] * len(row)
+        
+        st.dataframe(display_df.style.apply(highlight_status, axis=1), use_container_width=True)
+
         st.dataframe(display_df, use_container_width=True)
 
         # selection
@@ -283,20 +302,21 @@ if st.session_state.page == "dashboard":
                     except Exception:
                         st.error("id harus berupa angka integer.")
         with col_del:
+            confirm = st.checkbox("Centang untuk konfirmasi hapus")
             if st.button("🗑️ Hapus Record"):
                 if not sel:
                     st.warning("Masukkan id record yang ingin dihapus.")
+                elif not confirm:
+                    st.warning("Silakan centang konfirmasi hapus.")
                 else:
                     try:
                         rec_id = int(sel)
-                        confirm = st.checkbox(f"Yakin ingin menghapus record id={rec_id}?")
-                        if confirm:
-                            resp = delete_record(rec_id)
-                            if resp.error:
-                                st.error(f"Gagal hapus: {resp.error}")
-                            else:
-                                st.success("Record dihapus.")
-                                st.rerun()
+                        resp = delete_record(rec_id)
+                        if resp.status_code not in (200, 204):
+                            st.error(f"Gagal hapus. Status: {resp.status_code}")
+                        else:
+                            st.success("Record dihapus.")
+                            st.rerun()
                     except Exception as e:
                         st.error(f"Error: {e}")
         with col_refresh:
@@ -346,8 +366,8 @@ if st.session_state.page == "input" and st.session_state.edit_id:
                         "jatuh_tempo": str(jatuh_tempo)
                     }
                     resp = update_record(rec_id, update)
-                    if resp.error:
-                        st.error(f"Gagal update: {resp.error}")
+                    if resp.status_code not in (200, 201, 204):
+                        st.error(f"Gagal update. Status: {resp.status_code}")
                     else:
                         st.success("Record berhasil diupdate.")
                         st.session_state.edit_id = None
