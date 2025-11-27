@@ -145,10 +145,12 @@ if st.session_state.show_import:
                     if to_insert:
                         # batch insert
                         res = supabase.table("po_sales").insert(to_insert).execute()
-                        if res.status_code in (200, 201, 204):
-                            st.success(f"Berhasil memasukkan {len(to_insert)} record.")
+                        if not isinstance(res.data, list):
+                            st.error("Gagal import data.")
                         else:
-                            st.error(f"Gagal insert. Status: {res.status_code}")
+                            st.success(f"Berhasil memasukkan {len(to_insert)} record.")
+                            st.session_state.page = "dashboard"
+                            st.rerun()
 
             # end uploaded handling
 
@@ -186,12 +188,11 @@ if st.session_state.page == "input" and st.session_state.edit_id is None:
                     "status": status,
                     "tanggal": str(tanggal),
                     "jatuh_tempo": str(jatuh_tempo),
-                    # "created_at": pd.Timestamp.utcnow().isoformat()
                     "created_at": pd.Timestamp.now(tz=JAKARTA).isoformat()
                 }
                 res = supabase.table("po_sales").insert(rec).execute()
-                if res.status_code not in (200, 201, 204):
-                    st.error(f"Gagal menyimpan data. Status: {res.status_code}")
+                if not isinstance(res.data, list):
+                    st.error("Gagal menyimpan data PO.")
                 else:
                     st.success("Data PO berhasil disimpan!")
                     st.session_state.page = "dashboard"
@@ -310,10 +311,10 @@ if st.session_state.page == "dashboard":
                     try:
                         rec_id = int(sel)
                         resp = delete_record(rec_id)
-                        if resp.status_code not in (200, 204):
-                            st.error(f"Gagal hapus. Status: {resp.status_code}")
+                        if not isinstance(resp.data, list):
+                            st.error("Gagal menghapus data.")
                         else:
-                            st.success("Record dihapus.")
+                            st.success("Record berhasil dihapus.")
                             st.rerun()
                     except Exception as e:
                         st.error(f"Error: {e}")
@@ -364,8 +365,8 @@ if st.session_state.page == "input" and st.session_state.edit_id:
                         "jatuh_tempo": str(jatuh_tempo)
                     }
                     resp = update_record(rec_id, update)
-                    if resp.status_code not in (200, 201, 204):
-                        st.error(f"Gagal update. Status: {resp.status_code}")
+                    if not isinstance(resp.data, list):
+                        st.error("Gagal update data.")
                     else:
                         st.success("Record berhasil diupdate.")
                         st.session_state.edit_id = None
