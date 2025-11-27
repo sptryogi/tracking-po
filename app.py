@@ -274,8 +274,6 @@ if st.session_state.page == "dashboard":
         
         st.dataframe(display_df.style.apply(highlight_status, axis=1), use_container_width=True)
 
-        st.dataframe(display_df, use_container_width=True)
-
         # selection
         sel = st.text_input("Masukkan id (kolom `id`) dari record untuk Edit / Hapus, atau kosongkan")
         # Provide guidance: show id column
