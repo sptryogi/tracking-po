@@ -145,7 +145,7 @@ if st.session_state.show_import:
                     if to_insert:
                         # batch insert
                         res = supabase.table("po_sales").insert(to_insert).execute()
-                        if not isinstance(res.data, list):
+                        if res.data is None:
                             st.error("Gagal import data.")
                         else:
                             st.success(f"Berhasil memasukkan {len(to_insert)} record.")
@@ -191,7 +191,7 @@ if st.session_state.page == "input" and st.session_state.edit_id is None:
                     "created_at": pd.Timestamp.now(tz=JAKARTA).isoformat()
                 }
                 res = supabase.table("po_sales").insert(rec).execute()
-                if not isinstance(res.data, list):
+                if res.data is None:
                     st.error("Gagal menyimpan data PO.")
                 else:
                     st.success("Data PO berhasil disimpan!")
@@ -293,8 +293,8 @@ if st.session_state.page == "dashboard":
                             st.session_state.edit_id = rec_id
                             st.session_state.page = "input"
                             # prefill values by putting in session_state
-                            rec = res.data[0]
-                            st.session_state.prefill = rec
+                            # rec = res.data[0]
+                            # st.session_state.prefill = rec
                             st.rerun()
                         else:
                             st.error("Record tidak ditemukan.")
@@ -311,7 +311,7 @@ if st.session_state.page == "dashboard":
                     try:
                         rec_id = int(sel)
                         resp = delete_record(rec_id)
-                        if not isinstance(resp.data, list):
+                        if resp.data is None:
                             st.error("Gagal menghapus data.")
                         else:
                             st.success("Record berhasil dihapus.")
@@ -365,7 +365,7 @@ if st.session_state.page == "input" and st.session_state.edit_id:
                         "jatuh_tempo": str(jatuh_tempo)
                     }
                     resp = update_record(rec_id, update)
-                    if not isinstance(resp.data, list):
+                    if resp.data is None:
                         st.error("Gagal update data.")
                     else:
                         st.success("Record berhasil diupdate.")
@@ -374,8 +374,8 @@ if st.session_state.page == "input" and st.session_state.edit_id:
                         st.rerun()
 
 # If we came from pressing edit via dashboard selection earlier but earlier page logic didn't catch:
-if "prefill" in st.session_state and st.session_state.page == "input" and st.session_state.edit_id is None:
-    # prefill: user pressed Edit earlier, set edit_id and values
-    pre = st.session_state.pop("prefill")
-    st.session_state.edit_id = pre.get("id")
-    st.rerun()
+# if "prefill" in st.session_state and st.session_state.page == "input" and st.session_state.edit_id is None:
+#     # prefill: user pressed Edit earlier, set edit_id and values
+#     pre = st.session_state.pop("prefill")
+#     st.session_state.edit_id = pre.get("id")
+#     st.rerun()
