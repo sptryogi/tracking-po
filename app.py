@@ -277,7 +277,7 @@ if st.session_state.page == "dashboard":
                             # prefill values by putting in session_state
                             rec = res.data[0]
                             st.session_state.prefill = rec
-                            st.experimental_rerun()
+                            st.rerun()
                         else:
                             st.error("Record tidak ditemukan.")
                     except Exception:
@@ -289,19 +289,19 @@ if st.session_state.page == "dashboard":
                 else:
                     try:
                         rec_id = int(sel)
-                        confirm = st.confirm(f"Yakin ingin menghapus record id={rec_id}?")
+                        confirm = st.checkbox(f"Yakin ingin menghapus record id={rec_id}?")
                         if confirm:
                             resp = delete_record(rec_id)
                             if resp.error:
                                 st.error(f"Gagal hapus: {resp.error}")
                             else:
                                 st.success("Record dihapus.")
-                                st.experimental_rerun()
+                                st.rerun()
                     except Exception as e:
                         st.error(f"Error: {e}")
         with col_refresh:
             if st.button("🔄 Refresh Data"):
-                st.experimental_rerun()
+                st.rerun()
         with col_download:
             if st.button("📥 Download Laporan Excel"):
                 bytes_x = generate_excel_bytes(df_filtered)
@@ -352,11 +352,11 @@ if st.session_state.page == "input" and st.session_state.edit_id:
                         st.success("Record berhasil diupdate.")
                         st.session_state.edit_id = None
                         st.session_state.page = "dashboard"
-                        st.experimental_rerun()
+                        st.rerun()
 
 # If we came from pressing edit via dashboard selection earlier but earlier page logic didn't catch:
 if "prefill" in st.session_state and st.session_state.page == "input" and st.session_state.edit_id is None:
     # prefill: user pressed Edit earlier, set edit_id and values
     pre = st.session_state.pop("prefill")
     st.session_state.edit_id = pre.get("id")
-    st.experimental_rerun()
+    st.rerun()
