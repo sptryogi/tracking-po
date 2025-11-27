@@ -37,10 +37,10 @@ with col4:
     if st.button("📁 Import File"):
         # toggle import uploader visibility
         st.session_state.show_import = not st.session_state.show_import
-with col5:
-    if st.button("✏️ Edit Form"):
-        # to edit user will select a row in dashboard -> we'll set edit_id there
-        st.session_state.page = "dashboard"  # keep in dashboard until user selects record to edit
+# with col5:
+#     if st.button("✏️ Edit Form"):
+#         # to edit user will select a row in dashboard -> we'll set edit_id there
+#         st.session_state.page = "dashboard"  # keep in dashboard until user selects record to edit
 
 st.markdown("---")
 
@@ -348,30 +348,63 @@ if st.session_state.page == "input" and st.session_state.edit_id:
         if submitted:
             sisa = float(total_tagihan) - float(total_bayar)
             status = "Lunas" if sisa <= 0 else "Belum Lunas"
-            # if no_po changed, check duplicate (exclude current id)
+            
+            # Flag penanda apakah boleh lanjut update
+            proceed_update = True
+
+            # 1. Cek Validasi: Jika No PO berubah, pastikan tidak duplikat
             if no_po != rec.get("no_po"):
                 check = supabase.table("po_sales").select("id").eq("no_po", no_po).limit(1).execute()
-                if check.data and len(check.data)>0:
+                if check.data and len(check.data) > 0:
                     st.error("no_po sudah ada silahkan gunakan nomor lain atau edit record yang ada.")
+                    proceed_update = False
+            
+            # 2. Jika validasi aman, lakukan update
+            if proceed_update:
+                update = {
+                    "no_po": no_po,
+                    "customer": customer,
+                    "total_tagihan": total_tagihan,
+                    "total_bayar": total_bayar,
+                    "sisa": sisa,
+                    "status": status,
+                    "tanggal": str(tanggal),
+                    "jatuh_tempo": str(jatuh_tempo)
+                }
+                resp = update_record(rec_id, update)
+                if resp.data is None:
+                    st.error("Gagal update data.")
                 else:
-                    update = {
-                        "no_po": no_po,
-                        "customer": customer,
-                        "total_tagihan": total_tagihan,
-                        "total_bayar": total_bayar,
-                        "sisa": sisa,
-                        "status": status,
-                        "tanggal": str(tanggal),
-                        "jatuh_tempo": str(jatuh_tempo)
-                    }
-                    resp = update_record(rec_id, update)
-                    if resp.data is None:
-                        st.error("Gagal update data.")
-                    else:
-                        st.success("Record berhasil diupdate.")
-                        st.session_state.edit_id = None
-                        st.session_state.page = "dashboard"
-                        st.rerun()
+                    st.success("Record berhasil diupdate.")
+                    st.session_state.edit_id = None
+                    st.session_state.page = "dashboard"
+                    st.rerun()
+            # sisa = float(total_tagihan) - float(total_bayar)
+            # status = "Lunas" if sisa <= 0 else "Belum Lunas"
+            # # if no_po changed, check duplicate (exclude current id)
+            # if no_po != rec.get("no_po"):
+            #     check = supabase.table("po_sales").select("id").eq("no_po", no_po).limit(1).execute()
+            #     if check.data and len(check.data)>0:
+            #         st.error("no_po sudah ada silahkan gunakan nomor lain atau edit record yang ada.")
+            #     else:
+            #         update = {
+            #             "no_po": no_po,
+            #             "customer": customer,
+            #             "total_tagihan": total_tagihan,
+            #             "total_bayar": total_bayar,
+            #             "sisa": sisa,
+            #             "status": status,
+            #             "tanggal": str(tanggal),
+            #             "jatuh_tempo": str(jatuh_tempo)
+            #         }
+            #         resp = update_record(rec_id, update)
+            #         if resp.data is None:
+            #             st.error("Gagal update data.")
+            #         else:
+            #             st.success("Record berhasil diupdate.")
+            #             st.session_state.edit_id = None
+            #             st.session_state.page = "dashboard"
+            #             st.rerun()
 
 # If we came from pressing edit via dashboard selection earlier but earlier page logic didn't catch:
 # if "prefill" in st.session_state and st.session_state.page == "input" and st.session_state.edit_id is None:
