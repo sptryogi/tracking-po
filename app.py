@@ -448,7 +448,7 @@ if st.session_state.page == "dashboard":
 
         # --- TOMBOL 5: DOWNLOAD (REVISI TIMEZONE) ---
         with col_download:
-            if st.button("📥 Excel"):
+            if st.button("📥 Download Excel"):
                 # Copy dataframe agar tidak merusak tampilan asli
                 df_export = df_filtered.copy()
                 
