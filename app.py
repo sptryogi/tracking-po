@@ -451,15 +451,34 @@ if st.session_state.page == "dashboard":
             if st.button("📥 Download Excel"):
                 # Copy dataframe agar tidak merusak tampilan asli
                 df_export = df_filtered.copy()
-                
-                # REVISI: Konversi Timezone created_at ke Jakarta
+
+                # 1. FORMAT TANGGAL & JATUH TEMPO (Hapus Jam)
+                # Kita ubah menjadi string (text) format YYYY-MM-DD agar Excel tidak menambah jam 00:00:00
+                cols_date_only = ["tanggal", "jatuh_tempo"]
+                for col in cols_date_only:
+                    if col in df_export.columns:
+                        # Pastikan tipe datanya datetime dulu
+                        df_export[col] = pd.to_datetime(df_export[col], errors='coerce')
+                        # Ubah jadi string YYYY-MM-DD (jam hilang otomatis)
+                        df_export[col] = df_export[col].dt.strftime('%Y-%m-%d')
+
+                # 2. FORMAT CREATED_AT (Tetap ada Jam + Konversi ke Jakarta)
                 if "created_at" in df_export.columns:
                     # Pastikan format datetime
                     df_export["created_at"] = pd.to_datetime(df_export["created_at"])
                     # Convert UTC -> Jakarta
                     df_export["created_at"] = df_export["created_at"].dt.tz_convert(JAKARTA)
-                    # Hapus info timezone (+07:00) agar Excel membacanya sebagai "Local Time" yang bersih
+                    # Hapus info timezone (+07:00) agar Excel bersih, tapi jam tetap ada
                     df_export["created_at"] = df_export["created_at"].dt.tz_localize(None)
+                
+                # # REVISI: Konversi Timezone created_at ke Jakarta
+                # if "created_at" in df_export.columns:
+                #     # Pastikan format datetime
+                #     df_export["created_at"] = pd.to_datetime(df_export["created_at"])
+                #     # Convert UTC -> Jakarta
+                #     df_export["created_at"] = df_export["created_at"].dt.tz_convert(JAKARTA)
+                #     # Hapus info timezone (+07:00) agar Excel membacanya sebagai "Local Time" yang bersih
+                #     df_export["created_at"] = df_export["created_at"].dt.tz_localize(None)
 
                 bytes_x = generate_excel_bytes(df_export)
                 st.download_button("Klik Download", bytes_x, file_name="Laporan_PO.xlsx",
