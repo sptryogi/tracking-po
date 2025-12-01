@@ -242,18 +242,41 @@ if st.session_state.page == "dashboard":
         sc3.metric("Total Outstanding (Sisa)", fmt_currency(outstanding_sum))
 
         # chart: total per day (based on tanggal)
+        # try:
+        #     chart_df = df_filtered.copy()
+        #     chart_df["tanggal_day"] = chart_df["tanggal"].dt.date
+        #     # chart_agg = chart_df.groupby("tanggal_day").agg({"total_tagihan":"sum"}).reset_index()
+        #     # st.line_chart(chart_agg.rename(columns={"tanggal_day":"index"}).set_index("index")["total_tagihan"])
+        #     chart_agg = chart_df.groupby("tanggal_day", dropna=True)["total_tagihan"].sum().reset_index()
+        #     chart_agg = chart_agg.sort_values("tanggal_day")
+        #     st.line_chart(
+        #         chart_agg.set_index("tanggal_day")["total_tagihan"]
+        #     )
+        # except Exception:
+        #     st.write("Chart tidak tersedia karena data tanggal kurang lengkap.")
+        # chart: Bar chart per day (Tagihan, Bayar, Sisa)
         try:
             chart_df = df_filtered.copy()
             chart_df["tanggal_day"] = chart_df["tanggal"].dt.date
-            # chart_agg = chart_df.groupby("tanggal_day").agg({"total_tagihan":"sum"}).reset_index()
-            # st.line_chart(chart_agg.rename(columns={"tanggal_day":"index"}).set_index("index")["total_tagihan"])
-            chart_agg = chart_df.groupby("tanggal_day", dropna=True)["total_tagihan"].sum().reset_index()
+            
+            # Group by tanggal dan ambil sum untuk 3 kolom
+            chart_agg = chart_df.groupby("tanggal_day", dropna=True)[
+                ["total_tagihan", "total_bayar", "sisa"]
+            ].sum().reset_index()
+            
             chart_agg = chart_agg.sort_values("tanggal_day")
-            st.line_chart(
-                chart_agg.set_index("tanggal_day")["total_tagihan"]
+            
+            st.markdown("#### Grafik Keuangan Harian")
+            # Menampilkan Bar Chart
+            # Urutan warna di list color=[] harus sesuai urutan kolom di data (Tagihan, Bayar, Sisa)
+            # Biru (#29b5e8), Hijau (#28a745), Kuning (#ffc107)
+            st.bar_chart(
+                data=chart_agg.set_index("tanggal_day"),
+                y=["total_tagihan", "total_bayar", "sisa"],
+                color=["#29b5e8", "#28a745", "#ffc107"] 
             )
-        except Exception:
-            st.write("Chart tidak tersedia karena data tanggal kurang lengkap.")
+        except Exception as e:
+            st.write(f"Chart tidak tersedia: {e}")
 
         # show table with highlight
         from pandas.io.formats.style import Styler
