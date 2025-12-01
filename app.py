@@ -21,6 +21,10 @@ if "edit_id" not in st.session_state:
     st.session_state.edit_id = None
 if "show_import" not in st.session_state:
     st.session_state.show_import = False
+if "show_pay_dialog" not in st.session_state:
+    st.session_state.show_pay_dialog = False
+if "pay_rec_id" not in st.session_state:
+    st.session_state.pay_rec_id = None
 
 # -------- top navigation (buttons) --------
 col1, col2, col3, col4, col5 = st.columns([3,1,1,1,1])
@@ -303,52 +307,220 @@ if st.session_state.page == "dashboard":
         # Provide guidance: show id column
         st.caption("Untuk melihat kolom `id`, periksa tabel di atas (kolom id). Gunakan id tersebut untuk edit/hapus.")
 
-        col_edit, col_del, col_refresh, col_download = st.columns(4)
+        col_edit, col_pay, col_del, col_refresh, col_download = st.columns([1, 1, 1, 1, 1])
+        # with col_edit:
+        #     if st.button("✏️ Edit Record"):
+        #         if not sel:
+        #             st.warning("Masukkan id record yang ingin diedit.")
+        #         else:
+        #             try:
+        #                 rec_id = int(sel)
+        #                 res = supabase.table("po_sales").select("*").eq("id", rec_id).limit(1).execute()
+        #                 if res.data and len(res.data) > 0:
+        #                     st.session_state.edit_id = rec_id
+        #                     st.session_state.page = "input"
+        #                     # prefill values by putting in session_state
+        #                     # rec = res.data[0]
+        #                     # st.session_state.prefill = rec
+        #                     st.rerun()
+        #                 else:
+        #                     st.error("Record tidak ditemukan.")
+        #             except Exception:
+        #                 st.error("id harus berupa angka integer.")
+        # with col_pay:
+        #     if st.button("💰 Input Sisa"):
+        #         if not sel:
+        #             st.warning("Masukkan ID.")
+        #         else:
+        #             try:
+        #                 rec_id = int(sel)
+        #                 res = supabase.table("po_sales").select("*").eq("id", rec_id).limit(1).execute()
+        #                 if res.data and len(res.data) > 0:
+        #                     curr_rec = res.data[0]
+        #                     # Validasi: Hanya boleh jika Belum Lunas
+        #                     if curr_rec["status"] == "Lunas":
+        #                         st.error("PO ini sudah Lunas!")
+        #                         st.session_state.show_pay_dialog = False
+        #                     else:
+        #                         st.session_state.pay_rec_id = rec_id
+        #                         st.session_state.show_pay_dialog = True
+        #                         st.rerun()
+        #                 else:
+        #                     st.error("ID tidak ditemukan.")
+        #             except ValueError:
+        #                 st.error("ID harus angka.")
+        # with col_del:
+        #     confirm = st.checkbox("Centang untuk konfirmasi hapus")
+        #     if st.button("🗑️ Hapus Record"):
+        #         if not sel:
+        #             st.warning("Masukkan id record yang ingin dihapus.")
+        #         elif not confirm:
+        #             st.warning("Silakan centang konfirmasi hapus.")
+        #         else:
+        #             try:
+        #                 rec_id = int(sel)
+        #                 resp = delete_record(rec_id)
+        #                 if resp.data is None:
+        #                     st.error("Gagal menghapus data.")
+        #                 else:
+        #                     st.success("Record berhasil dihapus.")
+        #                     st.rerun()
+        #             except Exception as e:
+        #                 st.error(f"Error: {e}")
+        # with col_refresh:
+        #     if st.button("🔄 Refresh Data"):
+        #         st.rerun()
+        # with col_download:
+        #     if st.button("📥 Download Laporan Excel"):
+        #         bytes_x = generate_excel_bytes(df_filtered)
+        #         st.download_button("Download File Excel", bytes_x, file_name="Laporan_PO.xlsx",
+        #                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        # --- TOMBOL 1: EDIT ---
         with col_edit:
             if st.button("✏️ Edit Record"):
                 if not sel:
-                    st.warning("Masukkan id record yang ingin diedit.")
+                    st.warning("Masukkan ID.")
+                else:
+                    try:
+                        rec_id = int(sel)
+                        # Cek keberadaan data
+                        res = supabase.table("po_sales").select("*").eq("id", rec_id).limit(1).execute()
+                        if res.data and len(res.data) > 0:
+                            st.session_state.edit_id = rec_id
+                            st.session_state.page = "input"
+                            st.session_state.show_pay_dialog = False # matikan mode bayar jika pindah ke edit
+                            st.rerun()
+                        else:
+                            st.error("ID tidak ditemukan.")
+                    except ValueError:
+                        st.error("ID harus angka.")
+
+        # --- TOMBOL 2: INPUT SISA (FITUR BARU) ---
+        with col_pay:
+            if st.button("💰 Input Sisa"):
+                if not sel:
+                    st.warning("Masukkan ID.")
                 else:
                     try:
                         rec_id = int(sel)
                         res = supabase.table("po_sales").select("*").eq("id", rec_id).limit(1).execute()
                         if res.data and len(res.data) > 0:
-                            st.session_state.edit_id = rec_id
-                            st.session_state.page = "input"
-                            # prefill values by putting in session_state
-                            # rec = res.data[0]
-                            # st.session_state.prefill = rec
-                            st.rerun()
+                            curr_rec = res.data[0]
+                            # Validasi: Hanya boleh jika Belum Lunas
+                            if curr_rec["status"] == "Lunas":
+                                st.error("PO ini sudah Lunas!")
+                                st.session_state.show_pay_dialog = False
+                            else:
+                                st.session_state.pay_rec_id = rec_id
+                                st.session_state.show_pay_dialog = True
+                                st.rerun()
                         else:
-                            st.error("Record tidak ditemukan.")
-                    except Exception:
-                        st.error("id harus berupa angka integer.")
+                            st.error("ID tidak ditemukan.")
+                    except ValueError:
+                        st.error("ID harus angka.")
+
+        # --- TOMBOL 3: HAPUS ---
         with col_del:
-            confirm = st.checkbox("Centang untuk konfirmasi hapus")
+            confirm = st.checkbox("Konfirmasi hapus", key="chk_del")
             if st.button("🗑️ Hapus Record"):
                 if not sel:
-                    st.warning("Masukkan id record yang ingin dihapus.")
+                    st.warning("Masukkan ID.")
                 elif not confirm:
-                    st.warning("Silakan centang konfirmasi hapus.")
+                    st.warning("Centang konfirmasi.")
                 else:
                     try:
                         rec_id = int(sel)
                         resp = delete_record(rec_id)
                         if resp.data is None:
-                            st.error("Gagal menghapus data.")
+                            st.error("Gagal hapus.")
                         else:
-                            st.success("Record berhasil dihapus.")
+                            st.success("Terhapus.")
+                            st.session_state.show_pay_dialog = False
                             st.rerun()
                     except Exception as e:
                         st.error(f"Error: {e}")
+
+        # --- TOMBOL 4: REFRESH ---
         with col_refresh:
-            if st.button("🔄 Refresh Data"):
+            if st.button("🔄 Refresh"):
+                st.session_state.show_pay_dialog = False
                 st.rerun()
+
+        # --- TOMBOL 5: DOWNLOAD (REVISI TIMEZONE) ---
         with col_download:
-            if st.button("📥 Download Laporan Excel"):
-                bytes_x = generate_excel_bytes(df_filtered)
-                st.download_button("Download File Excel", bytes_x, file_name="Laporan_PO.xlsx",
+            if st.button("📥 Excel"):
+                # Copy dataframe agar tidak merusak tampilan asli
+                df_export = df_filtered.copy()
+                
+                # REVISI: Konversi Timezone created_at ke Jakarta
+                if "created_at" in df_export.columns:
+                    # Pastikan format datetime
+                    df_export["created_at"] = pd.to_datetime(df_export["created_at"])
+                    # Convert UTC -> Jakarta
+                    df_export["created_at"] = df_export["created_at"].dt.tz_convert(JAKARTA)
+                    # Hapus info timezone (+07:00) agar Excel membacanya sebagai "Local Time" yang bersih
+                    df_export["created_at"] = df_export["created_at"].dt.tz_localize(None)
+
+                bytes_x = generate_excel_bytes(df_export)
+                st.download_button("Klik Download", bytes_x, file_name="Laporan_PO.xlsx",
                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+        # --- FORM PEMBAYARAN (INPUT SISA) MUNCUL DI BAWAH TOMBOL ---
+        if st.session_state.show_pay_dialog and st.session_state.pay_rec_id:
+            st.markdown("---")
+            st.info(f"### 💳 Form Pembayaran Sisa (ID: {st.session_state.pay_rec_id})")
+            
+            # Ambil data terbaru untuk ID tersebut
+            pay_res = supabase.table("po_sales").select("*").eq("id", st.session_state.pay_rec_id).single().execute()
+            if pay_res.data:
+                p_data = pay_res.data
+                cur_tagihan = float(p_data['total_tagihan'])
+                cur_bayar = float(p_data['total_bayar'])
+                cur_sisa = float(p_data['sisa'])
+                
+                c_info1, c_info2 = st.columns(2)
+                c_info1.write(f"**Customer:** {p_data['customer']}")
+                c_info1.write(f"**Total Tagihan:** {fmt_currency(cur_tagihan)}")
+                c_info2.write(f"**Sudah Dibayar:** {fmt_currency(cur_bayar)}")
+                c_info2.metric("Sisa Tagihan Saat Ini", fmt_currency(cur_sisa))
+                
+                with st.form("form_bayar_sisa"):
+                    # Input pembayaran baru
+                    input_bayar = st.number_input("Masukkan Jumlah Pembayaran Tambahan", min_value=0.0, max_value=cur_sisa, step=1000.0)
+                    btn_bayar = st.form_submit_button("Simpan Pembayaran")
+                    
+                    if btn_bayar:
+                        if input_bayar <= 0:
+                            st.error("Jumlah pembayaran harus lebih dari 0.")
+                        else:
+                            # Hitung logika matematika baru
+                            new_total_bayar = cur_bayar + input_bayar
+                            new_sisa = cur_tagihan - new_total_bayar
+                            
+                            # Tentukan status baru (toleransi float kecil)
+                            new_status = "Lunas" if new_sisa <= 100 else "Belum Lunas"
+                            
+                            update_payload = {
+                                "total_bayar": new_total_bayar,
+                                "sisa": new_sisa,
+                                "status": new_status
+                            }
+                            
+                            up_res = update_record(st.session_state.pay_rec_id, update_payload)
+                            
+                            if up_res.data:
+                                st.success(f"Pembayaran berhasil! Sisa kini: {fmt_currency(new_sisa)}")
+                                st.session_state.show_pay_dialog = False # Tutup form
+                                st.session_state.pay_rec_id = None
+                                st.rerun()
+                            else:
+                                st.error("Gagal update database.")
+                
+                if st.button("Batal / Tutup Form"):
+                    st.session_state.show_pay_dialog = False
+                    st.rerun()
+            else:
+                st.error("Data tidak ditemukan saat mengambil detail.")
 
 # Edit flow: if edit_id set and page input
 if st.session_state.page == "input" and st.session_state.edit_id:
